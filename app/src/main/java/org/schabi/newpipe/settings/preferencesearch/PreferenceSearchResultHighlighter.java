@@ -95,7 +95,7 @@ public final class PreferenceSearchResultHighlighter {
                 .obtainStyledAttributes(
                         typedValue.data,
                         new int[]{android.R.attr.textColorPrimary});
-        final int color = arr.getColor(0, 0xffE53935);
+        final int color = arr.getColor(0, 0xffCD7F32);
         arr.recycle();
 
         // Show highlight icon
