@@ -28,7 +28,7 @@ abstract class StreamHistoryDAO : BasicDAO<StreamHistoryEntity> {
         throw UnsupportedOperationException()
     }
 
-    @get:Query("SELECT * FROM streams INNER JOIN stream_history ON uid = stream_id ORDER BY access_date DESC")
+    @get:Query("SELECT * FROM streams INNER JOIN stream_history ON uid = stream_id WHERE uploader_url IS NULL OR uploader_url NOT IN (SELECT url FROM blocked_channels) ORDER BY access_date DESC")
     abstract val history: Flowable<MutableList<StreamHistoryEntry>>
 
     @get:Query("SELECT * FROM streams INNER JOIN stream_history ON uid = stream_id ORDER BY uid ASC")
@@ -55,6 +55,9 @@ abstract class StreamHistoryDAO : BasicDAO<StreamHistoryEntity> {
 
         LEFT JOIN (SELECT stream_id AS stream_id_alias, progress_time FROM stream_state )
         ON uid = stream_id_alias
+
+        WHERE uploader_url IS NULL
+        OR uploader_url NOT IN (SELECT url FROM blocked_channels)
         """
     )
     abstract fun getStatistics(): Flowable<MutableList<StreamStatisticsEntry>>

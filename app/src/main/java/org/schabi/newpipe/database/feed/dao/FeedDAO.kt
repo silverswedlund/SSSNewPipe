@@ -81,6 +81,10 @@ abstract class FeedDAO {
             OR s.upload_date IS NULL
             OR s.upload_date < :uploadDateBefore
         )
+        AND (
+            s.uploader_url IS NULL
+            OR s.uploader_url NOT IN (SELECT url FROM blocked_channels)
+        )
 
         ORDER BY s.upload_date IS NULL DESC, s.upload_date DESC, s.uploader ASC
         LIMIT 500

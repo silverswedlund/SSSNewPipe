@@ -31,6 +31,7 @@ import org.schabi.newpipe.info_list.holder.StreamCardInfoItemHolder;
 import org.schabi.newpipe.info_list.holder.StreamGridInfoItemHolder;
 import org.schabi.newpipe.info_list.holder.StreamInfoItemHolder;
 import org.schabi.newpipe.info_list.holder.StreamMiniInfoItemHolder;
+import org.schabi.newpipe.local.channel.BlockedChannelManager;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
 import org.schabi.newpipe.util.FallbackViewHolder;
 import org.schabi.newpipe.util.OnClickGesture;
@@ -38,6 +39,7 @@ import org.schabi.newpipe.util.OnClickGesture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /*
  * Created by Christian Schabesberger on 01.08.16.
@@ -132,8 +134,24 @@ public class InfoListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     + infoItemList.size() + ", data.size() = " + data.size());
         }
 
+        // Filter out blocked channels from streams and channel results
+        final BlockedChannelManager blockedChannelManager =
+                BlockedChannelManager.getInstance(layoutInflater.getContext());
+        final List<? extends InfoItem> filteredData = data.stream()
+                .filter(item -> {
+                    if (item instanceof StreamInfoItem) {
+                        return !blockedChannelManager.isBlocked(
+                                ((StreamInfoItem) item).getUploaderUrl());
+                    } else if (item instanceof ChannelInfoItem) {
+                        return !blockedChannelManager.isBlocked(
+                                ((ChannelInfoItem) item).getUrl());
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+
         final int offsetStart = sizeConsideringHeaderOffset();
-        infoItemList.addAll(data);
+        infoItemList.addAll(filteredData);
 
         if (DEBUG) {
             Log.d(TAG, "addInfoItemList() after > offsetStart = " + offsetStart + ", "
@@ -141,7 +159,7 @@ public class InfoListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     + "hasHeader = " + hasHeader() + ", "
                     + "showFooter = " + showFooter);
         }
-        notifyItemRangeInserted(offsetStart, data.size());
+        notifyItemRangeInserted(offsetStart, filteredData.size());
 
         if (showFooter) {
             final int footerNow = sizeConsideringHeaderOffset();

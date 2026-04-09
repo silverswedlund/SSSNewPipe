@@ -33,8 +33,14 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/menu_item_openInBrowser"
+        android:id="@+id/menu_item_block_channel"
         android:orderInCategory="3"
+        android:title="@string/block_channel"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_item_openInBrowser"
+        android:orderInCategory="4"
         android:title="@string/open_in_browser"
         app:showAsAction="never" />
 </menu>

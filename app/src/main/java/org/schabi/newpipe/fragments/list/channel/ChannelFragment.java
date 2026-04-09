@@ -17,9 +17,11 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.view.MenuProvider;
@@ -43,6 +45,7 @@ import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
 import org.schabi.newpipe.fragments.BaseStateFragment;
 import org.schabi.newpipe.fragments.detail.TabAdapter;
 import org.schabi.newpipe.ktx.AnimationType;
+import org.schabi.newpipe.local.channel.BlockedChannelManager;
 import org.schabi.newpipe.local.feed.notifications.NotificationHelper;
 import org.schabi.newpipe.local.subscription.SubscriptionManager;
 import org.schabi.newpipe.util.ChannelTabHelper;
@@ -99,6 +102,8 @@ public class ChannelFragment extends BaseStateFragment<ChannelInfo>
 
     private MenuItem menuRssButton;
     private MenuItem menuNotifyButton;
+    private MenuItem menuBlockButton;
+    private boolean isChannelBlocked = false;
     private SubscriptionEntity channelSubscription;
     private MenuProvider menuProvider;
 
@@ -154,8 +159,10 @@ public class ChannelFragment extends BaseStateFragment<ChannelInfo>
                 public void onPrepareMenu(@NonNull final Menu menu) {
                     menuRssButton = menu.findItem(R.id.menu_item_rss);
                     menuNotifyButton = menu.findItem(R.id.menu_item_notify);
+                    menuBlockButton = menu.findItem(R.id.menu_item_block_channel);
                     updateRssButton();
                     updateNotifyButton(channelSubscription);
+                    updateBlockButton();
                 }
 
                 @Override
@@ -181,6 +188,8 @@ public class ChannelFragment extends BaseStateFragment<ChannelInfo>
                             ShareUtils.shareText(requireContext(), name,
                                     currentInfo.getOriginalUrl(), currentInfo.getAvatars());
                         }
+                    } else if (itemId == R.id.menu_item_block_channel) {
+                        toggleBlockChannel();
                     } else {
                         return false;
                     }
@@ -456,6 +465,65 @@ public class ChannelFragment extends BaseStateFragment<ChannelInfo>
                 .show();
     }
 
+    /*//////////////////////////////////////////////////////////////////////////
+    // Channel Blocking
+    //////////////////////////////////////////////////////////////////////////*/
+
+    private void updateBlockButton() {
+        if (menuBlockButton == null || url == null) {
+            return;
+        }
+        final BlockedChannelManager manager =
+                BlockedChannelManager.getInstance(requireContext());
+        isChannelBlocked = manager.isBlocked(url);
+        menuBlockButton.setTitle(isChannelBlocked
+                ? R.string.unblock_channel
+                : R.string.block_channel);
+    }
+
+    private void toggleBlockChannel() {
+        if (currentInfo == null) {
+            return;
+        }
+        final BlockedChannelManager manager =
+                BlockedChannelManager.getInstance(requireContext());
+
+        if (isChannelBlocked) {
+            // Unblock immediately
+            disposables.add(manager.unblockChannel(currentInfo.getUrl())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(() -> {
+                        isChannelBlocked = false;
+                        updateBlockButton();
+                        Toast.makeText(requireContext(),
+                                R.string.channel_unblocked, Toast.LENGTH_SHORT).show();
+                    }));
+        } else {
+            // Show confirmation dialog before blocking
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.block_channel)
+                    .setMessage(getString(R.string.block_channel_confirm,
+                            currentInfo.getName()))
+                    .setPositiveButton(R.string.block_channel, (dialog, which) -> {
+                        disposables.add(manager.blockChannel(
+                                currentInfo.getServiceId(),
+                                currentInfo.getUrl(),
+                                currentInfo.getName(),
+                                ImageStrategy.imageListToDbUrl(currentInfo.getAvatars()))
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe(() -> {
+                                    isChannelBlocked = true;
+                                    updateBlockButton();
+                                    Toast.makeText(requireContext(),
+                                            R.string.channel_blocked, Toast.LENGTH_SHORT)
+                                            .show();
+                                }));
+                    })
+                    .setNegativeButton(R.string.cancel, null)
+                    .show();
+        }
+    }
+
 
     /*//////////////////////////////////////////////////////////////////////////
     // Init
@@ -589,6 +657,9 @@ public class ChannelFragment extends BaseStateFragment<ChannelInfo>
         super.handleResult(result);
         currentInfo = result;
         setInitialData(result.getServiceId(), result.getOriginalUrl(), result.getName());
+
+        // Update blocked status for this channel
+        updateBlockButton();
 
         if (ImageStrategy.shouldLoadImages() && !result.getBanners().isEmpty()) {
             CoilHelper.INSTANCE.loadBanner(binding.channelBannerImage, result.getBanners());

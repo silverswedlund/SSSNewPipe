@@ -91,6 +91,7 @@ import org.schabi.newpipe.fragments.list.videos.RelatedItemsFragment;
 import org.schabi.newpipe.ktx.AnimationType;
 import org.schabi.newpipe.local.dialog.PlaylistDialog;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
+import org.schabi.newpipe.local.channel.BlockedChannelManager;
 import org.schabi.newpipe.local.playlist.LocalPlaylistFragment;
 import org.schabi.newpipe.player.Player;
 import org.schabi.newpipe.player.PlayerIntentType;
@@ -1513,6 +1514,16 @@ public final class VideoDetailFragment
         currentInfo = info;
         setInitialData(info.getServiceId(), info.getOriginalUrl(), info.getName(), playQueue);
 
+        // Check if this channel is blocked
+        final BlockedChannelManager blockedChannelManager =
+                BlockedChannelManager.getInstance(requireContext());
+        if (blockedChannelManager.isBlocked(info.getUploaderUrl())) {
+            showBlockedChannelOverlay(info);
+            return;
+        }
+        // Hide blocked overlay in case it was previously shown
+        binding.blockedChannelOverlay.setVisibility(View.GONE);
+
         updateTabs(info);
 
         animate(binding.detailThumbnailPlayButton, true, 200);
@@ -1681,6 +1692,35 @@ public final class VideoDetailFragment
         CoilHelper.INSTANCE.loadAvatar(binding.detailUploaderThumbnailView,
                 info.getUploaderAvatars());
         binding.detailUploaderThumbnailView.setVisibility(View.VISIBLE);
+    }
+
+    private void showBlockedChannelOverlay(final StreamInfo info) {
+        binding.detailVideoTitleView.setText(title);
+        animate(binding.detailVideoTitleView, true, 0);
+
+        // Hide normal content
+        binding.detailContentRootHiding.setVisibility(View.GONE);
+        animate(binding.detailThumbnailPlayButton, false, 0);
+        animate(binding.detailDurationView, false, 0);
+
+        // Show blocked overlay
+        binding.blockedChannelOverlay.setVisibility(View.VISIBLE);
+        binding.blockedChannelMessage.setText(
+                getString(R.string.channel_is_blocked));
+
+        binding.blockedChannelUnblockButton.setOnClickListener(v -> {
+            final BlockedChannelManager manager =
+                    BlockedChannelManager.getInstance(requireContext());
+            disposables.add(manager.unblockChannel(info.getUploaderUrl())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(() -> {
+                        binding.blockedChannelOverlay.setVisibility(View.GONE);
+                        // Re-trigger loading the video now that channel is unblocked
+                        handleResult(info);
+                        Toast.makeText(requireContext(),
+                                R.string.channel_unblocked, Toast.LENGTH_SHORT).show();
+                    }));
+        });
     }
 
     public void openDownloadDialog() {

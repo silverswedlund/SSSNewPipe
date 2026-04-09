@@ -3,6 +3,9 @@
     <!-- App versioning -->
     <string name="last_used_preferences_version">last_used_preferences_version</string>
 
+    <!-- Blocked Channels -->
+    <string name="blocked_channels_key">blocked_channels</string>
+
     <!-- Service -->
     <string name="current_service_key">service</string>
     <string name="default_service_value">@string/youtube</string>

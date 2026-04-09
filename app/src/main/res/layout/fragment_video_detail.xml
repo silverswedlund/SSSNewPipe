@@ -215,6 +215,36 @@
                     android:visibility="gone"
                     tools:visibility="gone" />
 
+                <!--BLOCKED CHANNEL OVERLAY-->
+                <LinearLayout
+                    android:id="@+id/blocked_channel_overlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/detail_title_root_layout"
+                    android:layout_marginTop="40dp"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="24dp"
+                    android:visibility="gone"
+                    tools:visibility="gone">
+
+                    <org.schabi.newpipe.views.NewPipeTextView
+                        android:id="@+id/blocked_channel_message"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/channel_is_blocked"
+                        android:textAppearance="?android:attr/textAppearanceMedium"
+                        android:textSize="18sp" />
+
+                    <Button
+                        android:id="@+id/blocked_channel_unblock_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/unblock_channel" />
+                </LinearLayout>
+
                 <!--HIDING ROOT-->
                 <LinearLayout
                     android:id="@+id/detail_content_root_hiding"
